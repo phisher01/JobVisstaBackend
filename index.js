@@ -43,7 +43,6 @@ const API_URL = 'https://jsearch.p.rapidapi.com/search';
  */
 const fetchJobs = async (searchQuery = 'all') => {
   console.log(`🟡 Fetching jobs from API for query: "${searchQuery}"...`);
-  
   try {
     const response = await axios.get(API_URL, {
       params: { query: searchQuery, num_pages: 10 },
@@ -115,13 +114,31 @@ app.get('/api/search-jobs', async (req, res) => {
   }
 });
 
-// (Optional) Endpoint to get all jobs from DB.
+// Endpoint to get all jobs from DB.
 app.get('/api/jobs', async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
   try {
-    const jobs = await Job.find();
-    res.json(jobs);
+    const jobs = await Job.find().skip(skip).limit(limit);
+    res.json({ jobs });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch jobs" });
+  }
+});
+
+
+// Get a single job by its MongoDB _id
+app.get('/api/jobs/:id', async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    res.json(job);
   } catch (err) {
-    console.error("Error fetching all jobs:", err);
+    console.error('Error fetching job detail:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
